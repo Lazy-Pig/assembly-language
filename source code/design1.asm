@@ -13,7 +13,7 @@ data segment
 data ends
 
 table segment
-	db 21 dup ('year                                 ',0)
+	db 21 dup ('year      s         n         p        ',0)                   ;39+1=40个字节，21行每行40个字节，最后一个字节是0
 table ends
 
 stack segment
@@ -72,27 +72,30 @@ code segment
 	pop cx
 	loop s0
 
-
 	mov si,0             ;结果打印在屏幕中
 	mov ax,table
 	mov ds,ax	
 	mov cx,21
-	mov ah,1
-	mov al,0
-     s4:call show_str
-	inc ah
-	add si,40
+	mov dh,1
+	mov dl,0
+     s4:push cx
+	mov ch,0
+	mov cl,2
+	call show_str
+	inc dh
+	add si,1
+	pop cx
 	loop s4
 	
 	mov ax,4c00h
-	int 21
+	int 21h
 
 
    dtoc:push cx
 	push bx
 	mov bx,bp             ;存一下起始位置
      s2:mov cx,10
-     	call divdw            ;dx，ax所组成的dword转十进制字符串
+     	call divdw            ;dx，ax所组成的dword转十进制字符串。每次对10取余，结果是倒序的
 	add cx,30h
 	mov es:[bp],cl
 	mov cx,dx
@@ -100,18 +103,18 @@ code segment
 	jcxz ok1
 	inc bp
 	jmp short s2
-    ok1:mov al,es:[bp]
+    ok1:mov al,es:[bp]        ;用两个指针将倒序的十进制字符串变成正序。bx是左边的指针，bp是右边的指针
 	mov ah,es:[bx]
 	mov es:[bx],al
 	mov es:[bp],ah
+	mov cx,bp             ;bx等于bp，则结束循环
+	sub cx,bx
+	jcxz ok2
+	inc bx                ;bx加一后，bx等于bp，则结束循环
 	mov cx,bp
 	sub cx,bx
 	jcxz ok2
-	inc bx
-	mov cx,bp
-	sub cx,bx
-	jcxz ok2
-	sub bp,1
+	sub bp,1              ;bx加一且bp减1后，bx等于bp，则结束循环
 	mov cx,bp
 	sub cx,bx
 	jcxz ok2
@@ -146,12 +149,14 @@ code segment
 
 	mov ah,0	
 	mov al,dh
+	mov bh,0
 	mov bl,160
 	mul bl
 	mov di,ax            ;行偏移
 	
 	mov ah,0
 	mov al,dl
+	mov bh,0
 	mov bl,2
 	mul bl
 	mov bx,ax            ;列偏移
@@ -166,7 +171,7 @@ code segment
 	inc si
 	jmp short s3
 
-     ok3:pop di
+    ok3:pop di
 	pop bx
 	pop ax
 	pop es
